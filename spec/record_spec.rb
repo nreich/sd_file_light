@@ -10,5 +10,10 @@ describe Record do
   it { should respond_to :structure }
   it { should respond_to :fields }
 
+  context 'creating new record' do
+    its(:header) { should == record_text[0..3].join }
+    its(:structure) { should == record_text[4..32].join }
+    its('fields.size') {should == 4 }
+  end
 end
 
