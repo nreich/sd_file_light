@@ -8,6 +8,30 @@ class Record
     @fields = field_array(lines)
   end
 
+  def field_exists?(name)
+    @fields.has_key?(name)
+  end
+
+  def field_data(name)
+    @fields[name]
+  end
+
+  def field_data!(name)
+    unless @fields.has_key?(name)
+      raise NonExistantField, "field \"#{name}\" does not exist", caller
+    end
+    @fields[name]
+  end
+
+  def field_count
+    @fields.size
+  end
+
+  def add_field(name, value)
+    @fields[name] = value.chomp unless value.empty?
+  end
+    
+
 private
 
   #sdf standard defines mol_file (aka structure) as all lines between header
@@ -28,4 +52,7 @@ private
     end
     Hash[entries]
   end
+end
+
+class NonExistantField < StandardError
 end
