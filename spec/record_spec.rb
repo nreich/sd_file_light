@@ -83,6 +83,12 @@ describe Record do
           expect(record.field_data(present_field)).to eq(original_value)
         end
       end
+      context 'with a blank name' do
+        it 'should not create a new field' do
+          record.add_field("", new_value)
+          expect(record.field_exists?("")).to be_false
+        end
+      end
     end
 
     describe 'removing a field' do
@@ -124,19 +130,18 @@ describe Record do
 
       context 'if field exists' do
         context 'and given a valid field name' do
-          before :each do
+          it 'should rename the field' do
             record.rename_field(present_field, new_name)
-          end
-
-          it 'should result in a field with the new name' do
             expect(record.field_data(new_name)).to eq(original_value)
-          end
-          it 'should remove the field with the original name' do
             expect(record.field_exists?(present_field)).to be_false
           end
         end
-        context 'and field name is blank' do
-          it 'is a pending example'
+        context 'and new field name is blank' do
+          it 'should not rename the field' do
+            record.rename_field(present_field, "")
+            expect(record.field_exists?("")).to be_false
+            expect(record.field_exists?(present_field)).to be_true
+          end
         end
       end
       context 'if field does not exist' do
@@ -163,4 +168,3 @@ describe Record do
   end
 
 end
-

@@ -28,7 +28,9 @@ class Record
   end
 
   def add_field(name, value)
-    @fields[name] = value.chomp unless value.empty?
+    unless name.empty? 
+      @fields[name] = value.chomp unless value.empty?
+    end
   end
     
   def remove_field(name)
@@ -40,7 +42,7 @@ class Record
   end
 
   def rename_field(old_name, new_name)
-    if field_exists?(old_name)
+    if field_exists?(old_name) && new_name.empty? == false
       @fields[new_name] = @fields[old_name]
       remove_field(old_name)
     end
