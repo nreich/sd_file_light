@@ -14,6 +14,10 @@ describe Record do
   it { should respond_to :field_data! }
   it { should respond_to :field_count }
   it { should respond_to :add_field }
+  it { should respond_to :remove_field }
+  it { should respond_to :edit_field }
+  it { should respond_to :rename_field }
+  it { should respond_to :field_names }
 
 
   context 'creating new record' do
@@ -97,9 +101,83 @@ describe Record do
       end
 
     end     
-      
+
+          
   end
 
+  context 'removing a field' do
+
+    let(:field_name) { "ID" }
+
+    it 'should result in no field with that name' do
+      record.remove_field(field_name)
+      record.field_exists?(field_name).should be_false
+    end
+
+    it 'should decrease the size of fields hash by 1' do
+      lambda { record.remove_field(field_name)
+       }.should change{record.fields.size}.by(-1)
+    end
+
+  end
+
+  context 'editing a field' do
+
+    let(:field_name) { "ID" }
+    let(:field_value) { "new value" }
+
+    it 'should change the value of the field given a valid value' do
+      old_value = record.field_data(field_name)
+      record.edit_field(field_name, field_value)
+      record.field_data(field_name).should_not eq(old_value)
+    end
+
+    it 'should not add a field if field does not exist' do
+      new_field_name = "new field" 
+      record.edit_field(new_field_name, field_value)
+      record.field_exists?(new_field_name).should be_false
+    end
+
+  end
+
+  context 'editing a field' do
+
+    let(:old_field_name) { "ID" }
+    let(:new_field_name) { "changed field" }
+
+    it 'should result in a field with the new name' do
+      record.rename_field(old_field_name, new_field_name)
+      record.field_exists?(new_field_name).should be_true
+    end
+
+    it 'should remove the field with old name' do
+      record.rename_field(old_field_name, new_field_name)
+      record.field_exists?(old_field_name).should be_false
+    end
+
+    it 'should create a new field if a field does not exist' do
+      record.rename_field("bogus field name", new_field_name)
+      record.field_exists?(new_field_name).should be_false
+    end
+
+  end
+
+  context 'retrieve field names' do
+
+    it 'should return an array of all field names' do
+      names = record.field_names
+      record.fields.each_key { |name| names.should include(name) }
+    end
+
+  end
+
+  context 'convert to string' do
+
+    it 'should return a string with proper sd file formatting' do
+      record.to_s.should eq(record_text.join)
+    end
+
+  end
 
 end
 

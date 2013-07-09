@@ -31,6 +31,33 @@ class Record
     @fields[name] = value.chomp unless value.empty?
   end
     
+  def remove_field(name)
+    @fields.delete(name)
+  end
+
+  def edit_field(name, value)
+    add_field(name, value) unless field_exists?(name) == false
+  end
+
+  def rename_field(old_name, new_name)
+    if field_exists?(old_name)
+      @fields[new_name] = @fields[old_name]
+      remove_field(old_name)
+    end
+  end
+
+  def field_names
+    @fields.keys
+  end
+
+  def to_s
+    field_string = ""
+    @fields.each_pair do |key, value| 
+      field_string += ">  <" + key + ">" + "\n" + value + "\n\n"
+		end 
+		record_string = @header + @structure + field_string + "$$$$\n"
+	end  
+
 
 private
 
