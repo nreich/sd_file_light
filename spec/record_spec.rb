@@ -20,163 +20,146 @@ describe Record do
   it { should respond_to :field_names }
 
 
-  context 'creating new record' do
+  describe 'creating new record' do
     its(:header) { should == record_text[0..3].join }
     its(:structure) { should == record_text[4..32].join }
     its(:field_count) {should == 4 }
   end
 
-  context 'field does not exist' do
-    let(:non_existant_field_name) { "non existant field" }
-    it 'should return false when existance of field checked' do
-      record.field_exists?(non_existant_field_name).should  be_false
-    end
-    it 'should return nil for the field data' do
-      record.field_data(non_existant_field_name).should == nil
-    end
-    it 'should raise an instance of NonExistantField
-        when bang method for field data requested' do
-      lambda { record.field_data!(non_existant_field_name) }.should
-        raise_error(NonExistantField, "field \"#{non_existant_field_name}\" 
-                    does not exist") 
-    end
-  end
-
-  context 'field exists' do
-    let(:valid_field_name) { "ID" }
-    it 'should return true when existance of field checked' do
-      record.field_exists?(valid_field_name).should be_true
-    end
-    it 'should return the correct field data' do
-      record.field_data(valid_field_name).should == "304"
-      record.field_data!(valid_field_name).should == "304"
-    end
-  end
-
-  context 'adding a field' do
+  describe 'interacting with fields' do
+    let(:missing_field) { "field not appearing in this record" }
+    let(:present_field) { record.fields.keys.first }
     let(:new_field) { "new field" }
+    let(:new_value) { "new data!" }
+    let!(:original_value) { record.field_data(present_field) }
 
-    context 'with valid data' do
-      let(:field_value) { "new value" }
-
-      it 'should add a field with the currently non-existant name' do
-        record.add_field(new_field, field_value)
-        record.field_exists?(new_field).should be_true
+    describe 'checking the existance of a field' do
+      it 'should return false if record does not contain the field' do
+        expect(record.field_exists?(missing_field)).to be_false
       end
-
-      it 'should have the right value in it' do
-        record.add_field(new_field, field_value)
-        record.field_data(new_field).should eq(field_value)
+      it 'should return true if record does contain the field' do
+        expect(record.field_exists?(present_field)).to be_true
       end
+    end
 
-      it 'should increase the fields hash size by 1' do
-        lambda { record.add_field(new_field, field_value) 
-          }.should change{record.fields.size}.by(1)
-      end
-
-      context 'when field already exists' do
-        
-        let(:field_name) { "ID" }
-
-        it 'should overwrite the previous value' do
-          old_value = record.field_data(new_field)
-          record.add_field(new_field, field_value)
-          record.field_data(new_field).should_not eq(old_value)
+    describe 'retrieving value for a field' do
+      context 'field does exist' do
+        it 'should return the correct value' do
+          record.fields["new field"] = "test value"
+          expect(record.field_data("new field")).to eq("test value")
+          expect(record.field_data!("new field")).to eq("test value")
         end
-
       end
-
-    end
-
-    context 'with blank data' do
-
-      it 'should not result in a field with that name' do
-        record.add_field(new_field, "")
-        record.field_exists?(new_field).should be_false
+      context 'field does not exist' do
+        it 'should return nil' do
+          expect(record.field_data(missing_field)).to be_nil
+        end
+        it 'should raise NonExistantField exception when bang method used' do
+          expect { record.field_data!(missing_field) }.to raise_error(
+            NonExistantField, "field \"#{missing_field}\" does not exist")
+        end
       end
+    end
 
-      it 'should not change size of fields hash' do
-        lambda { record.add_field(new_field, "")
-         }.should change{record.fields.size}.by(0)
+    describe 'adding a field' do
+      context 'with valid data' do
+        it 'should add new field with data if field does not exist' do
+          record.add_field(new_field, new_value)
+          expect(record.field_data(new_field)).to eq(new_value)
+        end
+        it 'should change value of an existing field' do
+          record.add_field(present_field, new_value)
+          expect(record.field_data(present_field)).to eq(new_value)
+        end
       end
+      context 'with blank data' do
+        it 'should not add the new field' do
+          record.add_field(new_field, "")
+          expect(record.field_exists?(new_field)).to be_false
+        end
+        it 'should not change an existing field' do
+          original_value = record.field_data(present_field)
+          record.add_field(present_field, "")
+          expect(record.field_data(present_field)).to eq(original_value)
+        end
+      end
+    end
 
-    end     
+    describe 'removing a field' do
+      it 'should result in the field no longer existing' do
+        record.remove_field(present_field)
+        expect(record.field_exists?(present_field)).to be_false
+      end
+      it 'should decrease the number of fields by 1' do
+        expect { record.remove_field(present_field) }.to change {
+          record.fields.size }.by(-1)
+      end
+      it 'should result in changes to fields if field does not exist' do
+        expect { record.remove_field(missing_field) }.to_not change {
+          record.fields } 
+      end
+    end
 
-          
+    describe 'editing a field' do
+      context 'if field exists' do
+        it 'should change the field value if value in not blank' do
+          record.edit_field(present_field, new_value)
+          expect(record.field_data(present_field)).to eq(new_value)
+        end
+        it 'should not change the field value if value is blank' do
+          record.edit_field(present_field, "")
+          expect(record.field_data(present_field)).to eq(original_value)
+        end
+      end
+      context 'if field does not exist' do
+        it 'should not add the field' do
+          record.edit_field(missing_field, new_value)
+          expect(record.field_exists?(missing_field)).to be_false
+        end
+      end
+    end
+
+    describe 'renaming a field' do
+      let(:new_name) { "new name" }
+
+      context 'if field exists' do
+        context 'and given a valid field name' do
+          before :each do
+            record.rename_field(present_field, new_name)
+          end
+
+          it 'should result in a field with the new name' do
+            expect(record.field_data(new_name)).to eq(original_value)
+          end
+          it 'should remove the field with the original name' do
+            expect(record.field_exists?(present_field)).to be_false
+          end
+        end
+        context 'and field name is blank' do
+          it 'is a pending example'
+        end
+      end
+      context 'if field does not exist' do
+        it 'should not create a new field' do
+          record.rename_field(missing_field, new_name)
+          expect(record.field_exists?(new_name)).to be_false
+        end
+      end
+    end
+
+    describe 'retreiving field names' do
+      it 'should return an array of all field names' do
+        names = record.field_names
+        record.fields.each_key { |name| expect(names).to include(name) }
+      end
+    end
+
   end
 
-  context 'removing a field' do
-
-    let(:field_name) { "ID" }
-
-    it 'should result in no field with that name' do
-      record.remove_field(field_name)
-      record.field_exists?(field_name).should be_false
-    end
-
-    it 'should decrease the size of fields hash by 1' do
-      lambda { record.remove_field(field_name)
-       }.should change{record.fields.size}.by(-1)
-    end
-
-  end
-
-  context 'editing a field' do
-
-    let(:field_name) { "ID" }
-    let(:field_value) { "new value" }
-
-    it 'should change the value of the field given a valid value' do
-      old_value = record.field_data(field_name)
-      record.edit_field(field_name, field_value)
-      record.field_data(field_name).should_not eq(old_value)
-    end
-
-    it 'should not add a field if field does not exist' do
-      new_field_name = "new field" 
-      record.edit_field(new_field_name, field_value)
-      record.field_exists?(new_field_name).should be_false
-    end
-
-  end
-
-  context 'editing a field' do
-
-    let(:old_field_name) { "ID" }
-    let(:new_field_name) { "changed field" }
-
-    it 'should result in a field with the new name' do
-      record.rename_field(old_field_name, new_field_name)
-      record.field_exists?(new_field_name).should be_true
-    end
-
-    it 'should remove the field with old name' do
-      record.rename_field(old_field_name, new_field_name)
-      record.field_exists?(old_field_name).should be_false
-    end
-
-    it 'should create a new field if a field does not exist' do
-      record.rename_field("bogus field name", new_field_name)
-      record.field_exists?(new_field_name).should be_false
-    end
-
-  end
-
-  context 'retrieve field names' do
-
-    it 'should return an array of all field names' do
-      names = record.field_names
-      record.fields.each_key { |name| names.should include(name) }
-    end
-
-  end
-
-  context 'convert to string' do
-
+  describe 'convert to string' do
     it 'should return a string with proper sd file formatting' do
-      record.to_s.should eq(record_text.join)
+      expect(record.to_s).to eq(record_text.join)
     end
-
   end
 
 end
